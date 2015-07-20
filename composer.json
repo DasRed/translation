@@ -1,0 +1,32 @@
+{
+	"name": "dasred/translation",
+	"homepage": "https://github.com/DasRed/translation",
+
+	"prefer-stable": true,
+	"minimum-stability": "dev",
+
+	"repositories": [
+		{
+			"type": "git",
+			"url": "https://github.com/DasRed/bbCodeParser.git"
+		}
+	],
+
+	"require": {
+		"zendframework/zend-config": "~2.5",
+		"zendframework/zend-log": "~2.5",
+		"zendframework/zend-servicemanager": "~2.5",
+		"dasred/bbCodeParser": "~1.0"
+	},
+
+	"autoload": {
+		"psr-4": {
+			"DasRed\\Translation\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"DasRedTest\\Translation\\": "test/"
+		}
+	}
+}
