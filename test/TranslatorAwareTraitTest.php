@@ -49,4 +49,29 @@ class TranslatorAwareTraitTest extends \PHPUnit_Framework_TestCase
 		$this->setExpectedException(TranslatorIsNotDefined::class);
 		$trait->__('admin.a', ['a' => 1], 'en-US', 'rofl', false);
 	}
+
+	/**
+	 * @covers ::translate
+	 */
+	public function testTranslate()
+	{
+		$translator = $this->getMockBuilder(Translator::class)->setMethods(['__'])->setConstructorArgs(['de-DE', __DIR__ . '/translation'])->getMock();
+		$translator->expects($this->once())->method('__')->with('admin.a', ['a' => 1], 'en-US', 'rofl', false)->willReturn('nuff');
+
+		$trait = $this->getMockBuilder('\DasRed\Translation\TranslatorAwareTrait')->setMethods(null)->getMockForTrait();
+		$trait->setTranslator($translator);
+
+		$this->assertSame('nuff', $trait->translate('admin.a', ['a' => 1], 'en-US', 'rofl', false));
+	}
+
+	/**
+	 * @covers ::translate
+	 */
+	public function testTranslateFailed()
+	{
+		$trait = $this->getMockBuilder('\DasRed\Translation\TranslatorAwareTrait')->setMethods(null)->getMockForTrait();
+
+		$this->setExpectedException(TranslatorIsNotDefined::class);
+		$trait->translate('admin.a', ['a' => 1], 'en-US', 'rofl', false);
+	}
 }
