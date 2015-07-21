@@ -5,6 +5,7 @@ interface TranslatorAwareInterface
 {
 
 	/**
+	 * alias for translate
 	 *
 	 * @param string $key
 	 * @param array $parameters
@@ -12,6 +13,7 @@ interface TranslatorAwareInterface
 	 * @param string $default
 	 * @param string $parseBBCode
 	 * @return string
+	 * @see self::translate
 	 */
 	public function __($key, array $parameters = [], $locale = null, $default = null, $parseBBCode = true);
 
@@ -27,4 +29,15 @@ interface TranslatorAwareInterface
 	 * @return self
 	 */
 	public function setTranslator(Translator $translator);
+
+	/**
+	 *
+	 * @param string $key
+	 * @param array $parameters
+	 * @param string $locale
+	 * @param string $default
+	 * @param string $parseBBCode
+	 * @return string
+	 */
+	public function translate($key, array $parameters = [], $locale = null, $default = null, $parseBBCode = true);
 }
