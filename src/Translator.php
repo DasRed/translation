@@ -2,7 +2,7 @@
 namespace DasRed\Translation;
 
 use DasRed\Parser\BBCode;
-use DasRed\Translation\Exception\DefaultLocaleCanNotBeNull;
+use DasRed\Translation\Exception\LocaleCanNotBeNull;
 use DasRed\Translation\Exception\FileNotFound;
 use DasRed\Translation\Exception\InvalidTranslationFile;
 use DasRed\Translation\Exception\InvalidTranslationKey;
@@ -18,11 +18,18 @@ class Translator
 {
 
 	/**
-	 * defines the default locale
+	 * defines the current locale
 	 *
 	 * @var string
 	 */
-	protected $defaultLocale;
+	protected $localeCurrent;
+
+	/**
+	 * defines the Default locale for TR Keys which not in current or give are found
+	 *
+	 * @var string
+	 */
+	protected $localeDefault;
 
 	/**
 	 *
@@ -64,14 +71,19 @@ class Translator
 
 	/**
 	 *
-	 * @param string $defaultLocale
+	 * @param string $localeCurrent
 	 * @param string $path
+	 * @param string $localeDefault
 	 * @param Logger $logger
 	 * @param BBCode $markupRenderer
 	 */
-	public function __construct($defaultLocale, $path, Logger $logger = null, BBCode $markupRenderer = null)
+	public function __construct($localeCurrent, $path, $localeDefault = null, Logger $logger = null, BBCode $markupRenderer = null)
 	{
-		$this->setDefaultLocale($defaultLocale)->setPath($path)->setLogger($logger)->setMarkupRenderer($markupRenderer);
+		$this->setLocaleCurrent($localeCurrent)
+			->setPath($path)
+			->setLocaleDefault($localeDefault)
+			->setLogger($logger)
+			->setMarkupRenderer($markupRenderer);
 	}
 
 	/**
@@ -89,7 +101,7 @@ class Translator
 	{
 		if ($locale === null)
 		{
-			$locale = $this->getDefaultLocale();
+			$locale = $this->getLocaleCurrent();
 		}
 
 		// get
@@ -112,9 +124,9 @@ class Translator
 			if ($default === null)
 			{
 				// go fallback
-				if ($locale !== $this->getDefaultLocale())
+				if ($locale !== $this->getLocaleDefault())
 				{
-					return $this->__($key, $parameters, $this->getDefaultLocale(), $default, $parseBBCode);
+					return $this->__($key, $parameters, $this->getLocaleDefault(), $default, $parseBBCode);
 				}
 
 				// show error text
@@ -174,7 +186,7 @@ class Translator
 	{
 		if ($locale === null)
 		{
-			$locale = $this->getDefaultLocale();
+			$locale = $this->getLocaleCurrent();
 		}
 
 		$files = glob($this->getPath() . '/' . $locale . '/*.php');
@@ -187,13 +199,28 @@ class Translator
 	}
 
 	/**
+	 * returns the current locale
+	 *
+	 * @return string
+	 */
+	public function getLocaleCurrent()
+	{
+		return $this->localeCurrent;
+	}
+
+	/**
 	 * returns the default locale
 	 *
 	 * @return string
 	 */
-	public function getDefaultLocale()
+	public function getLocaleDefault()
 	{
-		return $this->defaultLocale;
+		if ($this->localeDefault === null)
+		{
+			return $this->getLocaleCurrent();
+		}
+
+		return $this->localeDefault;
 	}
 
 	/**
@@ -359,20 +386,33 @@ class Translator
 	}
 
 	/**
-	 * set the default locale
+	 * set the current locale
 	 *
-	 * @param string $defaultLocale
+	 * @param string $localeCurrent
 	 * @return self
-	 * @throws DefaultLocaleCanNotBeNull
+	 * @throws LocaleCanNotBeNull
 	 */
-	public function setDefaultLocale($defaultLocale)
+	public function setLocaleCurrent($localeCurrent)
 	{
-		if ($defaultLocale === null)
+		if ($localeCurrent === null)
 		{
-			throw new DefaultLocaleCanNotBeNull();
+			throw new LocaleCanNotBeNull('current');
 		}
 
-		$this->defaultLocale = $defaultLocale;
+		$this->localeCurrent = $localeCurrent;
+
+		return $this;
+	}
+
+	/**
+	 * set the default locale
+	 *
+	 * @param string $localeDefault
+	 * @return self
+	 */
+	public function setLocaleDefault($localeDefault)
+	{
+		$this->localeDefault = $localeDefault;
 
 		return $this;
 	}
@@ -383,7 +423,7 @@ class Translator
 	 * @param Logger $logger
 	 * @return self
 	 */
-	public function setLogger(Logger $logger= null)
+	public function setLogger(Logger $logger = null)
 	{
 		$this->logger = $logger;
 
