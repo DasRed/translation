@@ -104,6 +104,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			['fr-FR', 'fr-CH', 'nuff.lol', [], 'de-DE', null, false, false, 'lachen!'],
 
 			['fr-FR', 'fr-CH', 'other.key', [], 'de-DE', null, false, false, 'valueother'],
+
+			['ru-RU', 'ru-RU', 'test/a/nuff/module.nuff', [], null, null, false, false, 'narf'],
 		];
 	}
 
@@ -234,6 +236,27 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			'nuff' => 'narf',
 			'lol' => 'rofl'
 		], $translations['en-US']['other']);
+	}
+
+	/**
+	 * @covers ::getAll
+	 */
+	public function testGetAllWithSubPath()
+	{
+		$translator = new Translator('ru-RU', $this->path);
+
+		// with default locale
+		$translations = $translator->getAll();
+
+		$this->assertCount(1, $translations);
+		$this->assertArrayHasKey('ru-RU', $translations);
+
+		$this->assertCount(1, $translations['ru-RU']);
+		$this->assertArrayHasKey('test/a/nuff/module', $translations['ru-RU']);
+
+		$this->assertEquals([
+			'nuff' => 'narf'
+		], $translations['ru-RU']['test/a/nuff/module']);
 	}
 
 	/**

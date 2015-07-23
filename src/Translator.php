@@ -189,10 +189,29 @@ class Translator
 			$locale = $this->getLocaleCurrent();
 		}
 
-		$files = glob($this->getPath() . '/' . $locale . '/*.php');
-		foreach ($files as $file)
+		$path = str_replace('\\', '/', $this->getPath() . '/' . $locale);
+		$directory = new \RecursiveDirectoryIterator($path);
+		$iterator = new \RecursiveIteratorIterator($directory);
+		$regex = new \RegexIterator($iterator, '/^.+\.php$/i', \RecursiveRegexIterator::GET_MATCH);
+
+		foreach ($regex as $file)
 		{
-			$this->load($locale, basename($file, '.php'));
+			$dirName = dirname($file[0]);
+			$fileName = basename($file[0], '.php');
+
+			$dirName = trim(str_replace([
+				$path,
+				'\\'
+			], [
+				'',
+				'/'
+			], $dirName), '/');
+			if (strlen($dirName) !== 0)
+			{
+				$dirName .= '/';
+			}
+
+			$this->load($locale, $dirName . $fileName);
 		}
 
 		return $this->translations;
