@@ -168,12 +168,13 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	/**
 	 * @covers ::getAll
 	 */
-	public function testGetAll()
+	public function testGetAllWithoutParsedBBCode()
 	{
-		$translator = new Translator('de-DE', $this->path, 'en-US');
+		$translator = new Translator('de-DE', $this->path, 'en-US', null, $this->markupRenderer);
+
 
 		// with default locale
-		$translations = $translator->getAll();
+		$translations = $translator->getAll(null, false);
 
 		$this->assertCount(1, $translations);
 		$this->assertArrayHasKey('de-DE', $translations);
@@ -196,7 +197,110 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		], $translations['de-DE']['other']);
 
 		// with none default locale after default
-		$translations = $translator->getAll('en-US');
+		$translations = $translator->getAll('en-US', false);
+
+		$this->assertCount(1, $translations);
+		$this->assertArrayHasKey('en-US', $translations);
+
+		// en-US
+		$this->assertCount(2, $translations['en-US']);
+		$this->assertArrayHasKey('cookie', $translations['en-US']);
+		$this->assertArrayHasKey('other', $translations['en-US']);
+
+		// en-US cookie
+		$this->assertEquals(['roflcopter' => 'wtf'], $translations['en-US']['cookie']);
+
+		// en-US other
+		$this->assertEquals([
+			'nuff' => 'narf',
+			'lol' => 'rofl'
+		], $translations['en-US']['other']);
+	}
+
+	/**
+	 * @covers ::getAll
+	 */
+	public function testGetAllWithoutParsedBBCodeWithoutMarkupRenderer()
+	{
+		$translator = new Translator('de-DE', $this->path, 'en-US');
+
+
+		// with default locale
+		$translations = $translator->getAll(null, true);
+
+		$this->assertCount(1, $translations);
+		$this->assertArrayHasKey('de-DE', $translations);
+
+		$this->assertCount(2, $translations['de-DE']);
+		$this->assertArrayHasKey('test', $translations['de-DE']);
+		$this->assertArrayHasKey('other', $translations['de-DE']);
+
+		$this->assertEquals([
+			'a' => 'c',
+			'key' => 'value',
+			'param1' => '[p1] und [PARAMeter] und [PARAMETER] & [PARAM]',
+			'param2' => '[p1] und {PARAMeter} und {PARAMETER} & {PARAM}'
+		], $translations['de-DE']['test']);
+		$this->assertEquals([
+			'a' => 'cother',
+			'key' => 'valueother',
+			'a.b.c' => 'gkjreqwbgukie',
+			'bb' => '[b]bbcode[/b] bb'
+		], $translations['de-DE']['other']);
+
+		// with none default locale after default
+		$translations = $translator->getAll('en-US', true);
+
+		$this->assertCount(1, $translations);
+		$this->assertArrayHasKey('en-US', $translations);
+
+		// en-US
+		$this->assertCount(2, $translations['en-US']);
+		$this->assertArrayHasKey('cookie', $translations['en-US']);
+		$this->assertArrayHasKey('other', $translations['en-US']);
+
+		// en-US cookie
+		$this->assertEquals(['roflcopter' => 'wtf'], $translations['en-US']['cookie']);
+
+		// en-US other
+		$this->assertEquals([
+			'nuff' => 'narf',
+			'lol' => 'rofl'
+		], $translations['en-US']['other']);
+	}
+
+	/**
+	 * @covers ::getAll
+	 */
+	public function testGetAllWithParsedBBCode()
+	{
+		$translator = new Translator('de-DE', $this->path, 'en-US', null, $this->markupRenderer);
+
+		// with default locale
+		$translations = $translator->getAll(null, true);
+
+		$this->assertCount(1, $translations);
+		$this->assertArrayHasKey('de-DE', $translations);
+
+		$this->assertCount(2, $translations['de-DE']);
+		$this->assertArrayHasKey('test', $translations['de-DE']);
+		$this->assertArrayHasKey('other', $translations['de-DE']);
+
+		$this->assertEquals([
+			'a' => 'c',
+			'key' => 'value',
+			'param1' => '[p1] und [PARAMeter] und [PARAMETER] & [PARAM]',
+			'param2' => '[p1] und {PARAMeter} und {PARAMETER} & {PARAM}'
+		], $translations['de-DE']['test']);
+		$this->assertEquals([
+			'a' => 'cother',
+			'key' => 'valueother',
+			'a.b.c' => 'gkjreqwbgukie',
+			'bb' => '<strong>bbcode</strong> bb'
+		], $translations['de-DE']['other']);
+
+		// with none default locale after default
+		$translations = $translator->getAll('en-US', true);
 
 		$this->assertCount(1, $translations);
 		$this->assertArrayHasKey('en-US', $translations);

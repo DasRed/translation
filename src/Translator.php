@@ -180,9 +180,10 @@ class Translator
 	/**
 	 *
 	 * @param string $locale
+	 * @param bool $parseBBCode
 	 * @return string[][]
 	 */
-	public function getAll($locale = null)
+	public function getAll($locale = null, $parseBBCode = true)
 	{
 		if ($locale === null)
 		{
@@ -219,10 +220,22 @@ class Translator
 			$this->load($locale, $dirName . $fileName);
 		}
 
+		$translations[$locale] = $this->translations[$locale];
+
+		// parse BBCode
+		if ($parseBBCode === true && $this->getMarkupRenderer() !== null)
+		{
+			foreach ($translations[$locale] as $file => $keys)
+			{
+				foreach ($keys as $trKey => $trValue)
+				{
+					$translations[$locale][$file][$trKey] = $this->getMarkupRenderer()->parse($trValue);
+				}
+			}
+		}
+
 		// just return the requested data not all
-		return [
-			$locale => $this->translations[$locale]
-		];
+		return $translations;
 	}
 
 	/**
