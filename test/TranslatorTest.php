@@ -170,7 +170,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAll()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$translator = new Translator('de-DE', $this->path, 'en-US');
 
 		// with default locale
 		$translations = $translator->getAll();
@@ -198,30 +198,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		// with none default locale after default
 		$translations = $translator->getAll('en-US');
 
-		$this->assertCount(2, $translations);
-		$this->assertArrayHasKey('de-DE', $translations);
+		$this->assertCount(1, $translations);
 		$this->assertArrayHasKey('en-US', $translations);
-
-		// de-DE
-		$this->assertCount(2, $translations['de-DE']);
-		$this->assertArrayHasKey('test', $translations['de-DE']);
-		$this->assertArrayHasKey('other', $translations['de-DE']);
-
-		// de-DE test
-		$this->assertEquals([
-			'a' => 'c',
-			'key' => 'value',
-			'param1' => '[p1] und [PARAMeter] und [PARAMETER] & [PARAM]',
-			'param2' => '[p1] und {PARAMeter} und {PARAMETER} & {PARAM}'
-		], $translations['de-DE']['test']);
-
-		// de-DE other
-		$this->assertEquals([
-			'a' => 'cother',
-			'key' => 'valueother',
-			'a.b.c' => 'gkjreqwbgukie',
-			'bb' => '[b]bbcode[/b] bb'
-		], $translations['de-DE']['other']);
 
 		// en-US
 		$this->assertCount(2, $translations['en-US']);

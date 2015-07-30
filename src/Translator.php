@@ -214,10 +214,14 @@ class Translator
 			$this->load($locale, $dirName . $fileName);
 		}
 
-		return $this->translations;
+		// just return the requested data not all
+		return [
+			$locale => $this->translations[$locale]
+		];
 	}
 
 	/**
+	 *
 	 * @return string[]
 	 */
 	public function getAllLocales()
