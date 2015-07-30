@@ -536,4 +536,21 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertSame($exptected, $reflectionMethod->invoke($translator, $text, $parameters));
 	}
+
+	/**
+	 *  @covers ::getAllLocales
+	 */
+	public function testGetAllLocales()
+	{
+		$translator = (new Translator('de-DE', $this->path));
+
+		$this->assertEquals([
+			'de-CH',
+			'de-DE',
+			'en-US',
+			'fr-CH',
+			'fr-FR',
+			'ru-RU'
+		], $translator->getAllLocales());
+	}
 }

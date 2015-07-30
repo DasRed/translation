@@ -65,7 +65,7 @@ class Translator
 	/**
 	 * holds for every locale the language file and the translation key
 	 *
-	 * @var array
+	 * @var string[]
 	 */
 	protected $translations = [];
 
@@ -90,7 +90,7 @@ class Translator
 	 * translation function
 	 *
 	 * @param string $key this is the translation key WITH the translation file. Syntax "FILE.KEY". e.g.: header.pageTitle
-	 * @param array $parameters list of key value list to replace in the content of translated string. in Translation is the syntax
+	 * @param string[] $parameters list of key value list to replace in the content of translated string. in Translation is the syntax
 	 *        "[KEY]". key is case insensitive
 	 * @param string $locale if not defined, then $this->getUserLocale())
 	 * @param string $default
@@ -180,7 +180,7 @@ class Translator
 	/**
 	 *
 	 * @param string $locale
-	 * @return array
+	 * @return string[][]
 	 */
 	public function getAll($locale = null)
 	{
@@ -215,6 +215,29 @@ class Translator
 		}
 
 		return $this->translations;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function getAllLocales()
+	{
+		$locales = [];
+
+		/* @var $fileinfo \DirectoryIterator */
+		foreach (new \DirectoryIterator($this->getPath()) as $fileinfo)
+		{
+			if ($fileinfo->isDot() === true || $fileinfo->isDir() === false)
+			{
+				continue;
+			}
+
+			$locales[] = $fileinfo->getBasename();
+		}
+
+		natsort($locales);
+
+		return $locales;
 	}
 
 	/**
@@ -382,7 +405,7 @@ class Translator
 	 * parse the given parameters in the $text if there is a placeholder for the parameters
 	 *
 	 * @param string $text
-	 * @param array $parameters
+	 * @param string[] $parameters
 	 * @return string
 	 */
 	protected function parseParameters($text, array $parameters = [])
