@@ -190,6 +190,11 @@ class Translator
 		}
 
 		$path = str_replace('\\', '/', $this->getPath() . '/' . $locale);
+		if (is_dir($path) === false)
+		{
+			return [];
+		}
+
 		$directory = new \RecursiveDirectoryIterator($path);
 		$iterator = new \RecursiveIteratorIterator($directory);
 		$regex = new \RegexIterator($iterator, '/^.+\.php$/i', \RecursiveRegexIterator::GET_MATCH);
@@ -227,6 +232,11 @@ class Translator
 	public function getAllLocales()
 	{
 		$locales = [];
+
+		if (is_dir($this->getPath()) === false)
+		{
+			return [];
+		}
 
 		/* @var $fileinfo \DirectoryIterator */
 		foreach (new \DirectoryIterator($this->getPath()) as $fileinfo)

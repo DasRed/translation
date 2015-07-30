@@ -238,6 +238,17 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	}
 
 	/**
+	 * @covers ::getAll
+	 */
+	public function testGetAllWithNotExistingLocalePath()
+	{
+		$translator = new Translator('fr-RU', $this->path);
+		$translations = $translator->getAll();
+
+		$this->assertCount(0, $translations);
+	}
+
+	/**
 	 * @covers ::getLocaleCurrent
 	 * @covers ::setLocaleCurrent
 	 */
@@ -531,4 +542,16 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			'ru-RU'
 		], $translator->getAllLocales());
 	}
+
+	/**
+	 * @covers ::getAllLocales
+	 */
+	public function testGetAllLocalesWithNotExistingTranslationPath()
+	{
+		$translator = new Translator('fr-RU', $this->path . '/vfghjdksljgnfjda');
+		$translations = $translator->getAllLocales();
+
+		$this->assertCount(0, $translations);
+	}
+
 }
