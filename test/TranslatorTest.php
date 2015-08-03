@@ -658,4 +658,60 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$this->assertCount(0, $translations);
 	}
 
+
+	/**
+	 * @covers ::getTemplateMissingKey
+	 * @covers ::setTemplateMissingKey
+	 */
+	public function testGetSetTemplateMissingKey()
+	{
+		$translator = new Translator('fr-RU', $this->path);
+
+		$this->assertSame('[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]', $translator->getTemplateMissingKey());
+		$this->assertSame($translator, $translator->setTemplateMissingKey('nuff'));
+		$this->assertSame('nuff', $translator->getTemplateMissingKey());
+	}
+
+	public function test__WithLog()
+	{
+		$translator = new Translator('fr-RU', $this->path, 'fr-RU', $this->logger);
+
+		$translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf']);
+		$this->assertCount(1, $this->logWriter->events);
+		$this->assertArrayHasKey('priority', $this->logWriter->events[0]);
+		$this->assertEquals(Logger::ERR, $this->logWriter->events[0]['priority']);
+		$this->assertArrayHasKey('extra', $this->logWriter->events[0]);
+		$this->assertArrayHasKey('trace', $this->logWriter->events[0]['extra']);
+		$this->assertArrayHasKey('key', $this->logWriter->events[0]['extra']);
+		$this->assertEquals('abc/def.geh', $this->logWriter->events[0]['extra']['key']);
+		$this->assertArrayHasKey('locale', $this->logWriter->events[0]['extra']);
+		$this->assertEquals('fr-RU', $this->logWriter->events[0]['extra']['locale']);
+		$this->assertArrayHasKey('parameters', $this->logWriter->events[0]['extra']);
+		$this->assertEquals(['a' => 1, 'key' => 'narf'], $this->logWriter->events[0]['extra']['parameters']);
+	}
+
+	public function test__WithTemplateMissingKeyModifingParameters()
+	{
+		$translator = $this->getMockBuilder(Translator::class)->setMethods(['parseParameters'])->setConstructorArgs(['fr-RU', $this->path])->getMock();
+		$translator->expects($this->once())->method('parseParameters')->with('[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]', $this->equalTo(
+		[
+			'a' => 1,
+			'key' => 'abc/def.geh',
+			'locale' => 'fr-RU'
+		]));
+		$translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf']);
+	}
+
+	public function test__WithTemplateMissingKey()
+	{
+		$translator = new Translator('fr-RU', $this->path);
+
+		$this->assertSame('[b][color=#F00]%%abc/def.geh%% (fr-RU)[/color][/b]', $translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf', 'c' => 'every']));
+
+		$translator->setTemplateMissingKey('[KEY]');
+		$this->assertSame('abc/def.geh', $translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf', 'c' => 'every']));
+
+		$translator->setTemplateMissingKey('[KEY]  ([LOCALE]/[C])');
+		$this->assertSame('abc/def.geh  (fr-RU/every)', $translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf', 'c' => 'every']));
+	}
 }

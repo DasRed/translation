@@ -63,6 +63,12 @@ class Translator
 	protected $placeholderSuffix = ']';
 
 	/**
+	 *
+	 * @var string
+	 */
+	protected $templateMissingKey = '[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]';
+
+	/**
 	 * holds for every locale the language file and the translation key
 	 *
 	 * @var string[]
@@ -99,6 +105,12 @@ class Translator
 	 */
 	public function __($key, array $parameters = [], $locale = null, $default = null, $parseBBCode = true)
 	{
+		$parametersToUse = $parameters;
+		if (is_array($parametersToUse) === false)
+		{
+			$parametersToUse = [];
+		}
+
 		if ($locale === null)
 		{
 			$locale = $this->getLocaleCurrent();
@@ -126,17 +138,25 @@ class Translator
 				// go fallback
 				if ($locale !== $this->getLocaleDefault())
 				{
-					return $this->__($key, $parameters, $this->getLocaleDefault(), $default, $parseBBCode);
+					return $this->__($key, $parametersToUse, $this->getLocaleDefault(), $default, $parseBBCode);
 				}
 
 				// show error text
-				$translation = '[b][color=#F00]%%' . $key . '%% (' . $locale . ')[/color][/b]';
+				$translation = $this->getTemplateMissingKey();
+				$parametersToUse['key'] = $key;
+				$parametersToUse['locale'] = $locale;
 			}
-			$this->log($exception->getMessage(), Logger::ERR);
+
+			$this->log($exception->getMessage(), Logger::ERR, [
+				'trace' => $exception->getTrace(),
+				'key' => $key,
+				'locale' => $locale,
+				'parameters' => $parameters
+			]);
 		}
 
 		// parse parameters
-		$translation = $this->parseParameters($translation, $parameters);
+		$translation = $this->parseParameters($translation, $parametersToUse);
 
 		// parse BB Code
 		if ($parseBBCode === true && empty($translation) === false && $this->getMarkupRenderer() !== null)
@@ -340,6 +360,14 @@ class Translator
 	}
 
 	/**
+	 * @return string
+	 */
+	public function getTemplateMissingKey()
+	{
+		return $this->templateMissingKey;
+	}
+
+	/**
 	 * checks if a file for a given locale loaded
 	 *
 	 * @param string $locale
@@ -414,16 +442,17 @@ class Translator
 	 *
 	 * @param string $message
 	 * @param string $priority
+	 * @param array $extra
 	 * @return self
 	 */
-	protected function log($message, $priority = Logger::DEBUG)
+	protected function log($message, $priority = Logger::DEBUG, array $extra = [])
 	{
 		if ($this->getLogger() === null)
 		{
 			return $this;
 		}
 
-		$this->getLogger()->log($priority, $message);
+		$this->getLogger()->log($priority, $message, $extra);
 
 		return $this;
 	}
@@ -549,6 +578,17 @@ class Translator
 	public function setPlaceholderSuffix($placeholderSuffix)
 	{
 		$this->placeholderSuffix = $placeholderSuffix;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $templateMissingKey
+	 * @return self
+	 */
+	public function setTemplateMissingKey($templateMissingKey)
+	{
+		$this->templateMissingKey = $templateMissingKey;
 
 		return $this;
 	}
