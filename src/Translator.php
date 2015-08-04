@@ -116,25 +116,24 @@ class Translator
 			$locale = $this->getLocaleCurrent();
 		}
 
-		$file = null;
+		$translationFile = null;
 		$translationKey = $key;
 
 		// get
 		try
 		{
-			$keyData = explode('.', $key);
-			if (count($keyData) <= 1)
-			{
-				throw new InvalidTranslationKey($key, $locale);
-			}
-			$file = array_shift($keyData);
-			$translationKey = implode('.', $keyData);
-
-			$translation = $this->get($locale, $file, $translationKey);
+			list ($translationFile, $translationKey) = $this->parseKey($key, $locale);
+			$translation = $this->get($locale, $translationFile, $translationKey);
 		}
 		// fallback
 		catch (Exception $exception)
 		{
+			if ($exception instanceof InvalidTranslationKey)
+			{
+				$translationFile = $exception->getTranslationFile();
+				$translationKey = $exception->getTranslationKey();
+			}
+
 			$translation = $default;
 			if ($default === null)
 			{
@@ -148,7 +147,7 @@ class Translator
 				$translation = $this->getTemplateMissingKey();
 				$parametersToUse['locale'] = $locale;
 				$parametersToUse['key'] = $key;
-				$parametersToUse['file'] = $file;
+				$parametersToUse['file'] = $translationFile;
 				$parametersToUse['translationKey'] = $translationKey;
 			}
 
@@ -365,6 +364,7 @@ class Translator
 	}
 
 	/**
+	 *
 	 * @return string
 	 */
 	public function getTemplateMissingKey()
@@ -460,6 +460,46 @@ class Translator
 		$this->getLogger()->log($priority, $message, $extra);
 
 		return $this;
+	}
+
+	/**
+	 *
+	 * @param string $key
+	 * @param string $locale
+	 * @throws InvalidTranslationKey
+	 * @return string[0 => FILE, 1 => TRANSLATION KEY]
+	 */
+	protected function parseKey($key, $locale)
+	{
+		$pathesToTest = array_unique([
+			$this->getPath() . '/' . $locale . '/',
+			$this->getPath() . '/' . $this->getLocaleCurrent() . '/',
+			$this->getPath() . '/' . $this->getLocaleDefault() . '/',
+		]);
+
+		$translationFile = null;
+		$translationKey = $key;
+
+		// split by dots and find existing file. test from longest possible file name to shortest file name
+		$parts = explode('.', $key);
+		for ($i = count($parts) - 1; $i > 0; $i--)
+		{
+			$translationFile = implode('.', array_slice($parts, 0, $i));
+			$translationKey = implode('.', array_slice($parts, $i));
+			// loop through all possible pathes
+			foreach ($pathesToTest as $path)
+			{
+				if (file_exists($path . $translationFile . '.php') === true)
+				{
+					return [
+						$translationFile,
+						$translationKey
+					];
+				}
+			}
+		}
+
+		throw new InvalidTranslationKey($key, $locale, $translationFile, $translationKey);
 	}
 
 	/**
@@ -588,6 +628,7 @@ class Translator
 	}
 
 	/**
+	 *
 	 * @param string $templateMissingKey
 	 * @return self
 	 */

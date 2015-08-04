@@ -11,6 +11,7 @@ use DasRed\Translation\Exception\InvalidTranslationFile;
 use DasRed\Translation\Exception\TranslationKeyNotFound;
 use DasRed\Translation\Exception\TranslationKeyIsNotAString;
 use DasRed\Translation\Exception\LocaleCanNotBeNull;
+use DasRed\Translation\Exception\InvalidTranslationKey;
 
 /**
  * @coversDefaultClass \DasRed\Translation\Translator
@@ -106,6 +107,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			['fr-FR', 'fr-CH', 'other.key', [], 'de-DE', null, false, false, 'valueother'],
 
 			['ru-RU', 'ru-RU', 'test/a/nuff/module.nuff', [], null, null, false, false, 'narf'],
+
+			['it-IT', 'it-IT', 'file/test_0/text_0.1.narf', [], null, null, false, false, 'nuff'],
+			['it-IT', 'it-IT', 'file/test.1/text.1.1.lol', [], null, null, false, false, 'fluffig'],
 		];
 	}
 
@@ -643,6 +647,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			'en-US',
 			'fr-CH',
 			'fr-FR',
+			'it-IT',
 			'ru-RU'
 		], $translator->getAllLocales());
 	}
@@ -658,7 +663,6 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$this->assertCount(0, $translations);
 	}
 
-
 	/**
 	 * @covers ::getTemplateMissingKey
 	 * @covers ::setTemplateMissingKey
@@ -672,6 +676,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$this->assertSame('nuff', $translator->getTemplateMissingKey());
 	}
 
+	/**
+	 * @covers ::__
+	 */
 	public function test__WithLog()
 	{
 		$translator = new Translator('fr-RU', $this->path, 'fr-RU', $this->logger);
@@ -690,6 +697,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals(['a' => 1, 'key' => 'narf'], $this->logWriter->events[0]['extra']['parameters']);
 	}
 
+	/**
+	 * @covers ::__
+	 */
 	public function test__WithTemplateMissingKeyModifingParameters()
 	{
 		$translator = $this->getMockBuilder(Translator::class)->setMethods(['parseParameters'])->setConstructorArgs(['fr-RU', $this->path])->getMock();
@@ -704,6 +714,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf']);
 	}
 
+	/**
+	 * @covers ::__
+	 */
 	public function test__WithTemplateMissingKey()
 	{
 		$translator = new Translator('fr-RU', $this->path);
@@ -715,5 +728,55 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 
 		$translator->setTemplateMissingKey('[KEY]  ([LOCALE]/[C])');
 		$this->assertSame('abc/def.geh  (fr-RU/every)', $translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf', 'c' => 'every']));
+	}
+
+	public function dataProviderParseKey()
+	{
+		return [
+
+			['de-DE', 'test.a', 'test', 'a', false],
+			['de-DE', 'test.key', 'test', 'key', false],
+			['de-DE', 'other.a', 'other', 'a', false],
+			['de-DE', 'other.key', 'other', 'key', false],
+			['de-DE', 'other.a.b.c', 'other', 'a.b.c', false],
+
+			['de-DE', 'testparam1', null, null, true],
+			['de-DE', 'testparam1', null, null, true],
+
+			['ru-RU', 'test/a/nuff/module.nuff', 'test/a/nuff/module', 'nuff', true],
+
+			['de-DE', 'file/test_0/text_0.1.narf', null, null, true],
+			['de-DE', 'file/test.1/text.1.1.lol', null, null, true],
+
+			['it-IT', 'file/test_0/text_0.1.narf', 'file/test_0/text_0.1', 'narf', false],
+			['it-IT', 'file/test.1/text.1.1.lol', 'file/test.1/text.1.1', 'lol', false],
+		];
+	}
+
+	/**
+	 *
+	 * @param string $locale
+	 * @param string $key
+	 * @param string $expectedFile
+	 * @param string $expectedKey
+	 * @covers ::parseKey
+	 * @dataProvider dataProviderParseKey
+	 */
+	public function testParseKey($locale, $key, $expectedFile, $expectedKey, $exception)
+	{
+		$translator = new Translator('de-DE', $this->path);
+
+		$reflectionMethod = new \ReflectionMethod($translator, 'parseKey');
+		$reflectionMethod->setAccessible(true);
+
+		if ($exception === false)
+		{
+			$this->assertEquals([$expectedFile, $expectedKey], $reflectionMethod->invoke($translator, $key, $locale));
+		}
+		else
+		{
+			$this->setExpectedException(InvalidTranslationKey::class);
+			$reflectionMethod->invoke($translator, $key, 'de-DE');
+		}
 	}
 }
