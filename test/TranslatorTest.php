@@ -696,8 +696,10 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$translator->expects($this->once())->method('parseParameters')->with('[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]', $this->equalTo(
 		[
 			'a' => 1,
+			'locale' => 'fr-RU',
 			'key' => 'abc/def.geh',
-			'locale' => 'fr-RU'
+			'file' => 'abc/def',
+			'translationKey' => 'geh',
 		]));
 		$translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf']);
 	}

@@ -116,6 +116,9 @@ class Translator
 			$locale = $this->getLocaleCurrent();
 		}
 
+		$file = null;
+		$translationKey = $key;
+
 		// get
 		try
 		{
@@ -143,14 +146,16 @@ class Translator
 
 				// show error text
 				$translation = $this->getTemplateMissingKey();
-				$parametersToUse['key'] = $key;
 				$parametersToUse['locale'] = $locale;
+				$parametersToUse['key'] = $key;
+				$parametersToUse['file'] = $file;
+				$parametersToUse['translationKey'] = $translationKey;
 			}
 
 			$this->log($exception->getMessage(), Logger::ERR, [
 				'trace' => $exception->getTrace(),
-				'key' => $key,
 				'locale' => $locale,
+				'key' => $key,
 				'parameters' => $parameters
 			]);
 		}
