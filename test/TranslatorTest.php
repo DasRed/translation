@@ -641,7 +641,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	{
 		$translator = (new Translator('de-DE', $this->path));
 
-		$result = [
+		$this->assertEquals([
 			'de-CH',
 			'de-DE',
 			'en-US',
@@ -649,9 +649,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			'fr-FR',
 			'it-IT',
 			'ru-RU'
-		];
-		natsort($result);
-		$this->assertEquals($result, $translator->getAllLocales());
+		], $translator->getAllLocales());
 	}
 
 	/**
