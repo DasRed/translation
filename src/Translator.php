@@ -288,7 +288,7 @@ class Translator
 
 		natsort($locales);
 
-		return $locales;
+		return array_values($locales);
 	}
 
 	/**
