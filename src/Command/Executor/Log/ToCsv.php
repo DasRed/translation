@@ -14,8 +14,9 @@ class ToCsv extends Parse
 		if (file_exists($file) === true)
 		{
 			unlink($file);
-			$this->write('File', 'LineNumber', 'Key', 'Locale', 'Count of Matches');
 		}
+
+		$this->write('File', 'LineNumber', 'Key', 'Locale', 'Count of Matches');
 
 		return parent::execute();
 	}

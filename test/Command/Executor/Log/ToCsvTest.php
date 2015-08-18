@@ -30,9 +30,37 @@ class ToCsvTest extends \PHPUnit_Framework_TestCase
 	/**
 	 * @covers ::execute
 	 */
-	public function testExecute()
+	public function testExecuteWithFileExists()
 	{
 		file_put_contents(__DIR__ . '/csv.csv', 'abnc');
+
+		$exec = $this->getMockBuilder(ToCsv::class)->setMethods(['write'])->setConstructorArgs([$this->console, [__DIR__ . '/translations.log', __DIR__ . '/csv.csv']])->getMock();
+		$exec->expects($this->exactly(8))->method('write')->withConsecutive(
+			['File', 'LineNumber', 'Key', 'Locale', 'Count of Matches'],
+			['/var/www/myposter/web/application/helpers/Accessories.php', 37, 'alu-galerie-aufhaengung-description', 'de-DE', 1],
+			['/var/www/myposter/web/application/helpers/ProductOverview.php', 37, 'landschaften', 'de-DE', 2],
+			['/var/www/myposter/web/application/helpers/ProductOverview.php', 37, 'praemierte-fotos', 'de-DE', 1],
+			['/var/www/myposter/web/application/helpers/ProductOverview.php', 37, 'staedte', 'de-DE', 1],
+			['/var/www/myposter/web/application/modules/admin/forms/Search.php', 45, 'customer-email', 'de-DE', 1],
+			['/var/www/myposter/web/application/modules/admin/forms/Search.php', 45, 'customer-name', 'de-DE', 1],
+			['/var/www/myposter/web/application/modules/admin/views/scripts/order/index.phtml', 34, 'Übersicht der Bestellungen', 'de-DE', 1]
+		)->willReturnSelf();
+
+		$this->console->expects($this->never())->method('write');
+		$this->console->expects($this->once())->method('writeLine')->with('Done.', ColorInterface::BLACK, ColorInterface::LIGHT_GREEN)->willReturnSelf();
+
+		$this->assertTrue($exec->execute());
+	}
+
+	/**
+	 * @covers ::execute
+	 */
+	public function testExecuteWithoutFileExists()
+	{
+		if (file_exists(__DIR__ . '/csv.csv') === true)
+		{
+			unlink(__DIR__ . '/csv.csv');
+		}
 
 		$exec = $this->getMockBuilder(ToCsv::class)->setMethods(['write'])->setConstructorArgs([$this->console, [__DIR__ . '/translations.log', __DIR__ . '/csv.csv']])->getMock();
 		$exec->expects($this->exactly(8))->method('write')->withConsecutive(

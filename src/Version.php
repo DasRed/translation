@@ -8,6 +8,6 @@ class Version
 	 */
 	public function get()
 	{
-		return '1.0.12';
+		return '1.0.13';
 	}
 }

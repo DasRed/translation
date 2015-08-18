@@ -14,6 +14,6 @@ class VersionTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGet()
 	{
-		$this->assertSame('1.0.12', (new Version())->get());
+		$this->assertSame('1.0.13', (new Version())->get());
 	}
 }
