@@ -106,10 +106,6 @@ class Translator
 	public function __($key, array $parameters = [], $locale = null, $default = null, $parseBBCode = true)
 	{
 		$parametersToUse = $parameters;
-		if (is_array($parametersToUse) === false)
-		{
-			$parametersToUse = [];
-		}
 
 		if ($locale === null)
 		{

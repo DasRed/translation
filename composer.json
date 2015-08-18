@@ -10,7 +10,9 @@
 		"zendframework/zend-config": "~2.5",
 		"zendframework/zend-log": "~2.5",
 		"zendframework/zend-servicemanager": "~2.5",
-		"dasred/bb-code-parser": "~1.0"
+		"phpoffice/phpexcel": "~1.8",
+		"dasred/zend-console": "@stable",
+		"dasred/bb-code-parser": "@stable"
 	},
 
 	"autoload": {
@@ -22,5 +24,9 @@
 		"psr-4": {
 			"DasRedTest\\Translation\\": "test/"
 		}
-	}
+	},
+
+	"bin": [
+		"bin/translation"
+	]
 }

@@ -1,5 +1,5 @@
 <phpunit
-	bootstrap="./bootstrap.php"
+	bootstrap="./../autoload.php"
 	backupGlobals="false"
 	forceCoversAnnotation="true"
 >

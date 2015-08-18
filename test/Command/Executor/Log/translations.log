@@ -1,0 +1,9 @@
+[2015-08-17T12:25:50+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/helpers/ProductOverview.php#37 {"locale":"de-DE","key":"staedte"}
+[2015-08-17T12:25:50+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/helpers/ProductOverview.php#37 {"locale":"de-DE","key":"landschaften"}
+[2015-08-17T12:25:50+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/helpers/ProductOverview.php#37 {"locale":"de-DE","key":"praemierte-fotos"}
+[2015-08-17T12:27:38+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/helpers/Accessories.php#37 {"locale":"de-DE","key":"alu-galerie-aufhaengung-description"}
+[2015-08-17T12:28:08+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/modules/admin/forms/Search.php#45 {"locale":"de-DE","key":"customer-email"}
+nope
+[2015-08-17T12:27:19+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/helpers/ProductOverview.php#37 {"locale":"de-DE","key":"landschaften"}
+[2015-08-17T12:32:23+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/modules/admin/views/scripts/order/index.phtml#34 {"locale":"de-DE","key":"Übersicht der Bestellungen"}
+[2015-08-17T12:34:46+00:00] ERR (3): Missing Key: /var/www/myposter/web/application/modules/admin/forms/Search.php#45 {"locale":"de-DE","key":"customer-name"}
