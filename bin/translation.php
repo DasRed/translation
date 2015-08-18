@@ -25,7 +25,8 @@ $message = 'operation' . PHP_EOL;
 $message .= PHP_EOL;
 
 $message .= $console->colorize('translation Operations:', ColorInterface::YELLOW) . PHP_EOL;
-$message .= $console->colorize(' translation sort <path>', ColorInterface::GREEN) . '   sorts the translations keys in the files.' . PHP_EOL;
+$message .= $console->colorize(' translation sort <path>', ColorInterface::GREEN) . '        sorts the translations keys in the files.' . PHP_EOL;
+$message .= $console->colorize(' translation duplicates <path>', ColorInterface::GREEN) . '  find keys with same content.' . PHP_EOL;
 
 $message .= PHP_EOL;
 $message .= $console->colorize('log Operations:', ColorInterface::YELLOW) . PHP_EOL;
