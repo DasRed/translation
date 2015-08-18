@@ -15,7 +15,6 @@ class Sort extends TranslationAbstract
 	{
 		try
 		{
-
 			$directory = new \RecursiveDirectoryIterator($this->getArguments()[0]);
 			$iterator = new \RecursiveIteratorIterator($directory);
 			$regex = new \RegexIterator($iterator, '/^.+\.php$/i', \RecursiveRegexIterator::GET_MATCH);
