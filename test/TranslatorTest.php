@@ -10,8 +10,9 @@ use DasRed\Translation\Exception\FileNotFound;
 use DasRed\Translation\Exception\InvalidTranslationFile;
 use DasRed\Translation\Exception\TranslationKeyNotFound;
 use DasRed\Translation\Exception\TranslationKeyIsNotAString;
-use DasRed\Translation\Exception\LocaleCanNotBeNull;
 use DasRed\Translation\Exception\InvalidTranslationKey;
+use DasRed\Translation\Locale;
+use DasRed\Translation\Locale\Collection;
 
 /**
  * @coversDefaultClass \DasRed\Translation\Translator
@@ -57,17 +58,18 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testConstructor()
 	{
-		$translator = new Translator('de-DE', $this->path, 'de-CH', $this->logger, $this->markupRenderer);
-		$this->assertSame('de-DE', $translator->getLocaleCurrent());
+		$locales = new Collection([new Locale('de-DE'), new Locale('de-CH')]);
+
+		$translator = new Translator($locales, $this->path, $this->logger, $this->markupRenderer);
+		$this->assertSame($locales, $translator->getLocales());
 		$this->assertSame($this->path . '/', $translator->getPath());
-		$this->assertSame('de-CH', $translator->getLocaleDefault());
 		$this->assertSame($this->logger, $translator->getLogger());
 		$this->assertSame($this->markupRenderer, $translator->getMarkupRenderer());
 
-		$translator = new Translator('de-DE', $this->path);
-		$this->assertSame('de-DE', $translator->getLocaleCurrent());
+		$locales = new Collection([new Locale('de-DE'), new Locale('de-CH')]);
+		$translator = new Translator($locales, $this->path);
+		$this->assertSame($locales, $translator->getLocale());
 		$this->assertSame($this->path . '/', $translator->getPath());
-		$this->assertSame('de-DE', $translator->getLocaleDefault());
 		$this->assertNull($translator->getLogger());
 		$this->assertNull($translator->getMarkupRenderer());
 	}
@@ -75,57 +77,62 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	public function dataProvider__()
 	{
 		return [
-			['de-DE', 'de-DE', 'test.a', [], null, null, true, true, 'c'],
-			['de-DE', 'de-DE', 'test.key', [], null, null, true, true, 'value'],
-			['de-DE', 'de-DE', 'test.param1', [], null, null, true, true, '[p1] und [PARAMeter] und [PARAMETER] & [PARAM]'],
-			['de-DE', 'de-DE', 'test.param2', [], null, null, true, true, '[p1] und {PARAMeter} und {PARAMETER} & {PARAM}'],
-			['de-DE', 'de-DE', 'other.a', [], null, null, true, true, 'cother'],
-			['de-DE', 'de-DE', 'other.key', [], null, null, true, true, 'valueother'],
-			['de-DE', 'de-DE', 'other.a.b.c', [], null, null, true, true, 'gkjreqwbgukie'],
+			['de-DE', 'de-DE', 'test.a', [], null, true, true, 'c'],
+			['de-DE', 'de-DE', 'test.key', [], null, true, true, 'value'],
+			['de-DE', 'de-DE', 'test.param1', [], null, true, true, '[p1] und [PARAMeter] und [PARAMETER] & [PARAM]'],
+			['de-DE', 'de-DE', 'test.param2', [], null, true, true, '[p1] und {PARAMeter} und {PARAMETER} & {PARAM}'],
+			['de-DE', 'de-DE', 'other.a', [], null, true, true, 'cother'],
+			['de-DE', 'de-DE', 'other.key', [], null, true, true, 'valueother'],
+			['de-DE', 'de-DE', 'other.a.b.c', [], null, true, true, 'gkjreqwbgukie'],
 
-			['de-DE', 'de-DE', 'other.bb', [], null, null, true, true, '<strong>bbcode</strong> bb'],
-			['de-DE', 'de-DE', 'other.bb', [], null, null, false, true, '[b]bbcode[/b] bb'],
-			['de-DE', 'de-DE', 'other.bb', [], null, null, true, false, '[b]bbcode[/b] bb'],
-			['de-DE', 'de-DE', 'other.bb', [], null, null, false, false, '[b]bbcode[/b] bb'],
+			['de-DE', 'de-DE', 'other.bb', [], null, true, true, '<strong>bbcode</strong> bb'],
+			['de-DE', 'de-DE', 'other.bb', [], null, false, true, '[b]bbcode[/b] bb'],
+			['de-DE', 'de-DE', 'other.bb', [], null, true, false, '[b]bbcode[/b] bb'],
+			['de-DE', 'de-DE', 'other.bb', [], null, false, false, '[b]bbcode[/b] bb'],
 
-			['de-DE', 'de-DE', 'other.nuff', [], 'en-US', null, true, true, 'narf'],
-			['de-DE', 'de-DE', 'other.lol', [], 'en-US', null, true, true, 'rofl'],
+			['de-DE', 'de-DE', 'other.nuff', [], 'en-US', true, true, 'narf'],
+			['de-DE', 'de-DE', 'other.lol', [], 'en-US', true, true, 'rofl'],
 
-			['de-DE', 'de-DE', 'test.a', ['c' => 'd'], null, null, true, true, 'c'],
-			['de-DE', 'de-DE', 'test.param1', ['p1' => 'jo'], null, null, true, true, 'jo und [PARAMeter] und [PARAMETER] & [PARAM]'],
+			['de-DE', 'de-DE', 'test.a', ['c' => 'd'], null, true, true, 'c'],
+			['de-DE', 'de-DE', 'test.param1', ['p1' => 'jo'], null, true, true, 'jo und [PARAMeter] und [PARAMETER] & [PARAM]'],
 
-			['de-DE', 'de-DE', 'testparam1', ['p1' => 'jo'], null, null, true, false, '[b][color=#F00]%%testparam1%% (de-DE)[/color][/b]'],
-			['de-DE', 'de-DE', 'testparam1', ['p1' => 'jo'], null, 'narfnarfnarfnarf', true, false, 'narfnarfnarfnarf'],
+			['de-DE', 'de-DE', 'testparam1', ['p1' => 'jo'], null, true, false, '[b][color=#F00]%%testparam1%% (de-DE)[/color][/b]'],
 
-			['de-DE', 'de-DE', 'other.a', [], 'en-US', null, false, false, 'cother'],
+			['de-DE', 'de-DE', 'other.a', [], 'en-US', false, false, 'cother'],
 
-			['fr-FR', 'fr-CH', 'nuff.narf', [], null, null, false, false, 'nein'],
-			['fr-FR', 'fr-CH', 'nuff.lol', [], null, null, false, false, 'lachen!'],
-			['fr-FR', 'fr-CH', 'nuff.haha', [], null, null, false, false, '[b][color=#F00]%%nuff.haha%% (fr-CH)[/color][/b]'],
-			['fr-FR', 'fr-CH', 'nuff.lol', [], 'de-DE', null, false, false, 'lachen!'],
+			['fr-FR', 'fr-CH', 'nuff.narf', [], null, false, false, 'nein'],
+			['fr-FR', 'fr-CH', 'nuff.lol', [], null, false, false, 'lachen!'],
+			['fr-FR', 'fr-CH', 'nuff.haha', [], null, false, false, '[b][color=#F00]%%nuff.haha%% (fr-CH)[/color][/b]'],
+			['fr-FR', 'fr-CH', 'nuff.lol', [], 'de-DE', false, false, 'lachen!'],
 
-			['fr-FR', 'fr-CH', 'other.key', [], 'de-DE', null, false, false, 'valueother'],
+			['fr-FR', 'fr-CH', 'other.key', [], 'de-DE', false, false, 'valueother'],
 
-			['ru-RU', 'ru-RU', 'test/a/nuff/module.nuff', [], null, null, false, false, 'narf'],
+			['ru-RU', 'ru-RU', 'test/a/nuff/module.nuff', [], null, false, false, 'narf'],
 
-			['it-IT', 'it-IT', 'file/test_0/text_0.1.narf', [], null, null, false, false, 'nuff'],
-			['it-IT', 'it-IT', 'file/test.1/text.1.1.lol', [], null, null, false, false, 'fluffig'],
+			['it-IT', 'it-IT', 'file/test_0/text_0.1.narf', [], null, false, false, 'nuff'],
+			['it-IT', 'it-IT', 'file/test.1/text.1.1.lol', [], null, false, false, 'fluffig'],
 		];
 	}
 
 	/**
 	 * @covers ::__
+	 * @covers ::handleTranslation
 	 * @dataProvider dataProvider__
 	 */
-	public function test__($localeCurrent, $localeDefault, $key, array $parameters, $locale, $default, $parserInjected, $parseBBCode, $expected)
+	public function test__AndHandleTranslation($localeCurrent, $localeDefault, $key, array $parameters, $locale, $parserInjected, $parseBBCode, $expected)
 	{
-		$translation = new Translator($localeCurrent, $this->path, $localeDefault, $this->logger);
+		$locales = new Collection(new Locale($localeCurrent), new Locale($localeDefault));
+		$translation = new Translator($locales, $this->path, $this->logger);
 		if ($parserInjected)
 		{
 			$translation->setMarkupRenderer($this->markupRenderer);
 		}
 
-		$this->assertEquals($expected, $translation->__($key, $parameters, $locale, $default, $parseBBCode));
+		if ($locale !== null)
+		{
+			$locale = new Locale($locale);
+		}
+		$this->assertEquals($expected, $translation->__($key, $parameters, $locale, $parseBBCode));
 	}
 
 	/**
@@ -133,12 +140,13 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGet()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'get');
 		$reflectionMethod->setAccessible(true);
 
-		$this->assertSame('[p1] und {PARAMeter} und {PARAMETER} & {PARAM}', $reflectionMethod->invoke($translator, 'de-DE', 'test', 'param2'));
+		$this->assertSame('[p1] und {PARAMeter} und {PARAMETER} & {PARAM}', $reflectionMethod->invoke($translator, new Locale('de-DE'), 'test', 'param2'));
 	}
 
 	/**
@@ -146,13 +154,14 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetFailedKeyNotFound()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'get');
 		$reflectionMethod->setAccessible(true);
 
 		$this->setExpectedException(TranslationKeyNotFound::class);
-		$reflectionMethod->invoke($translator, 'de-CH', 'foo', 'assfdsagfdsaztg54rwzhg564ezh65rte');
+		$reflectionMethod->invoke($translator, new Locale('de-CH'), 'foo', 'assfdsagfdsaztg54rwzhg564ezh65rte');
 	}
 
 	/**
@@ -160,13 +169,14 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetFailedKeyNotString()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'get');
 		$reflectionMethod->setAccessible(true);
 
 		$this->setExpectedException(TranslationKeyIsNotAString::class);
-		$reflectionMethod->invoke($translator, 'de-CH', 'foo', 'a');
+		$reflectionMethod->invoke($translator, new Locale('de-CH'), 'foo', 'a');
 	}
 
 	/**
@@ -174,8 +184,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllWithoutParsedBBCode()
 	{
-		$translator = new Translator('de-DE', $this->path, 'en-US', null, $this->markupRenderer);
-
+		$locales = new Collection([new Locale('de-DE', new Locale('en-US'))]);
+		$translator = new Translator($locales, $this->path, null, $this->markupRenderer);
 
 		// with default locale
 		$translations = $translator->getAll(null, false);
@@ -201,7 +211,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		], $translations['de-DE']['other']);
 
 		// with none default locale after default
-		$translations = $translator->getAll('en-US', false);
+		$translations = $translator->getAll(new Locale('en-US'), false);
 
 		$this->assertCount(1, $translations);
 		$this->assertArrayHasKey('en-US', $translations);
@@ -226,8 +236,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllWithoutParsedBBCodeWithoutMarkupRenderer()
 	{
-		$translator = new Translator('de-DE', $this->path, 'en-US');
-
+		$locales = new Collection([new Locale('de-DE', new Locale('en-US'))]);
+		$translator = new Translator($locales, $this->path);
 
 		// with default locale
 		$translations = $translator->getAll(null, true);
@@ -253,7 +263,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		], $translations['de-DE']['other']);
 
 		// with none default locale after default
-		$translations = $translator->getAll('en-US', true);
+		$translations = $translator->getAll(new Locale('en-US'), true);
 
 		$this->assertCount(1, $translations);
 		$this->assertArrayHasKey('en-US', $translations);
@@ -278,7 +288,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllWithParsedBBCode()
 	{
-		$translator = new Translator('de-DE', $this->path, 'en-US', null, $this->markupRenderer);
+		$locales = new Collection([new Locale('de-DE', new Locale('en-US'))]);
+		$translator = new Translator($locales, $this->path, null, $this->markupRenderer);
 
 		// with default locale
 		$translations = $translator->getAll(null, true);
@@ -329,7 +340,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllWithSubPath()
 	{
-		$translator = new Translator('ru-RU', $this->path);
+		$locales = new Collection([new Locale('ru-RU')]);
+		$translator = new Translator($locales, $this->path);
 
 		// with default locale
 		$translations = $translator->getAll();
@@ -350,49 +362,39 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllWithNotExistingLocalePath()
 	{
-		$translator = new Translator('fr-RU', $this->path);
+		$locales = new Collection([new Locale('fr-RU')]);
+		$translator = new Translator($locales, $this->path);
 		$translations = $translator->getAll();
 
 		$this->assertCount(0, $translations);
 	}
 
 	/**
-	 * @covers ::getLocaleCurrent
-	 * @covers ::setLocaleCurrent
+	 * @covers ::getAll
 	 */
-	public function testGetSetLocaleCurrent()
+	public function testGetAllWithDisabledLocales()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('ru-RU', false)]);
+		$translator = new Translator($locales, $this->path);
 
-		$this->assertSame('de-DE', $translator->getLocaleCurrent());
-		$this->assertSame($translator, $translator->setLocaleCurrent('en'));
-		$this->assertSame('en', $translator->getLocaleCurrent());
+		$this->assertCount(0, $translator->getAll());
 	}
 
 	/**
-	 * @covers ::setLocaleCurrent
+	 * @covers ::getLocales
+	 * @covers ::setLocales
 	 */
-	public function testSetLocaleCurrentFailed()
+	public function testGetSetLocales()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE'), new Locale('de-CH')]);
+		$localesOther = new Collection([new Locale('de-DE'), new Locale('de-CH')]);
+		$translator = new Translator($locales, $this->path);
 
-		$this->setExpectedException(LocaleCanNotBeNull::class);
-		$translator->setLocaleCurrent(null);
+		$this->assertSame($locales, $translator->getLocales());
+		$this->assertSame($translator, $translator->setLocales($localesOther));
+		$this->assertSame($localesOther, $translator->getLocales());
 	}
 
-	/**
-	 * @covers ::getLocaleDefault
-	 * @covers ::setLocaleDefault
-	 */
-	public function testGetSetLocaleDefault()
-	{
-		$translator = new Translator('de-DE', $this->path);
-
-		$this->assertSame('de-DE', $translator->getLocaleDefault());
-		$this->assertSame($translator, $translator->setLocaleDefault('en'));
-		$this->assertSame('en', $translator->getLocaleDefault());
-		$this->assertSame('de-DE', $translator->getLocaleCurrent());
-	}
 	/**
 	 * @covers ::getLogger
 	 * @covers ::setLogger
@@ -402,7 +404,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$logger1 = (new Logger())->addWriter($this->logWriter);
 		$logger2 = (new Logger())->addWriter($this->logWriter);
 
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertNull($translator->getLogger());
 		$this->assertSame($translator, $translator->setLogger($logger1));
@@ -422,7 +425,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$markupRenderer1 = new BBCode(null);
 		$markupRenderer2 = new BBCode(null);
 
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertNull($translator->getMarkupRenderer());
 		$this->assertSame($translator, $translator->setMarkupRenderer($markupRenderer1));
@@ -439,7 +443,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetSetPath()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertSame($this->path . '/', $translator->getPath());
 		$this->assertSame($translator, $translator->setPath(__DIR__));
@@ -453,7 +458,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testSetPathFailed()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->setExpectedException(PathCanNotBeNull::class);
 		$translator->setPath(null);
@@ -465,7 +471,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetSetPlaceholderPrefix()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertSame('[', $translator->getPlaceholderPrefix());
 		$this->assertSame($translator, $translator->setPlaceholderPrefix('{'));
@@ -478,7 +485,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetSetPlaceholderSuffix()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertSame(']', $translator->getPlaceholderSuffix());
 		$this->assertSame($translator, $translator->setPlaceholderSuffix('}'));
@@ -490,17 +498,18 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testIsFileLoaded()
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'isFileLoaded');
 		$reflectionMethod->setAccessible(true);
 
-		$this->assertFalse($reflectionMethod->invoke($translator, 'de-DE', 'nuff'));
+		$this->assertFalse($reflectionMethod->invoke($translator, new Locale('de-DE'), 'nuff'));
 
 		$translator->__('test.a');
-		$this->assertFalse($reflectionMethod->invoke($translator, 'de-DE', 'nuff'));
+		$this->assertFalse($reflectionMethod->invoke($translator, new Locale('de-DE'), 'nuff'));
 
-		$this->assertTrue($reflectionMethod->invoke($translator, 'de-DE', 'test'));
+		$this->assertTrue($reflectionMethod->invoke($translator, new Locale('de-DE'), 'test'));
 	}
 
 	/**
@@ -508,7 +517,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testLoad()
 	{
-		$translator = new Translator('de-DE', $this->path, 'de-DE', $this->logger);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'load');
 		$reflectionMethod->setAccessible(true);
@@ -516,7 +526,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 		$reflectionProperty = new \ReflectionProperty($translator, 'translations');
 		$reflectionProperty->setAccessible(true);
 
-		$this->assertTrue($reflectionMethod->invoke($translator, 'de-DE', 'test'));
+		$this->assertTrue($reflectionMethod->invoke($translator, new Locale('de-DE'), 'test'));
 		$this->assertCount(1, $this->logWriter->events);
 		$this->assertStringStartsWith('Language loaded: de-DE/test (', $this->logWriter->events[0]['message']);
 		$this->assertSame(Logger::DEBUG, $this->logWriter->events[0]['priority']);
@@ -531,7 +541,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 			]
 		], $reflectionProperty->getValue($translator));
 
-		$this->assertTrue($reflectionMethod->invoke($translator, 'de-DE', 'test'));
+		$this->assertTrue($reflectionMethod->invoke($translator, new Locale('de-DE'), 'test'));
 		$this->assertCount(1, $this->logWriter->events);
 		$this->assertStringStartsWith('Language loaded: de-DE/test (', $this->logWriter->events[0]['message']);
 		$this->assertSame(Logger::DEBUG, $this->logWriter->events[0]['priority']);
@@ -552,13 +562,14 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testLoadFailedNotFound()
 	{
-		$translator = new Translator('de-DE', $this->path, 'de-DE', $this->logger);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'load');
 		$reflectionMethod->setAccessible(true);
 
 		$this->setExpectedException(FileNotFound::class);
-		$reflectionMethod->invoke($translator, 'zh-CN-Hans', 'test');
+		$reflectionMethod->invoke($translator, new Locale('zh-CH'), 'test');
 
 		$this->assertCount(0, $this->logWriter->events);
 	}
@@ -568,13 +579,14 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testLoadFailedInvalidFile()
 	{
-		$translator = new Translator('de-DE', $this->path, 'de-DE', $this->logger);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'load');
 		$reflectionMethod->setAccessible(true);
 
 		$this->setExpectedException(InvalidTranslationFile::class);
-		$reflectionMethod->invoke($translator, 'de-CH', 'test');
+		$reflectionMethod->invoke($translator, new Locale('de-CH'), 'test');
 
 		$this->assertCount(0, $this->logWriter->events);
 	}
@@ -584,7 +596,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testLog()
 	{
-		$translator = new Translator('de-DE', $this->path, 'de-DE', $this->logger);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'log');
 		$reflectionMethod->setAccessible(true);
@@ -626,7 +639,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testParseParameters($prefix, $suffix, $text, array $parameters, $exptected)
 	{
-		$translator = (new Translator('de-DE', $this->path))->setPlaceholderPrefix($prefix)->setPlaceholderSuffix($suffix);
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
+		$translator->setPlaceholderPrefix($prefix)->setPlaceholderSuffix($suffix);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'parseParameters');
 		$reflectionMethod->setAccessible(true);
@@ -639,7 +654,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllLocales()
 	{
-		$translator = (new Translator('de-DE', $this->path));
+		$locales = new Collection([new Locale('de-DE')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertEquals([
 			'de-CH',
@@ -657,7 +673,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetAllLocalesWithNotExistingTranslationPath()
 	{
-		$translator = new Translator('fr-RU', $this->path . '/vfghjdksljgnfjda');
+		$locales = new Collection([new Locale('fr-RU')]);
+		$translator = new Translator($locales, $this->path . '/vfghjdksljgnfjda');
 		$translations = $translator->getAllLocales();
 
 		$this->assertCount(0, $translations);
@@ -669,7 +686,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testGetSetTemplateMissingKey()
 	{
-		$translator = new Translator('fr-RU', $this->path);
+		$locales = new Collection([new Locale('fr-RU')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$this->assertSame('[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]', $translator->getTemplateMissingKey());
 		$this->assertSame($translator, $translator->setTemplateMissingKey('nuff'));
@@ -681,7 +699,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test__WithLog()
 	{
-		$translator = new Translator('fr-RU', $this->path, 'fr-RU', $this->logger);
+		$locales = new Collection([new Locale('fr-RU')]);
+		$translator = new Translator($locales, $this->path, $this->logger);
 
 		$translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf']);
 		$this->assertCount(1, $this->logWriter->events);
@@ -702,7 +721,9 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test__WithTemplateMissingKeyModifingParameters()
 	{
-		$translator = $this->getMockBuilder(Translator::class)->setMethods(['parseParameters'])->setConstructorArgs(['fr-RU', $this->path])->getMock();
+		$locales = new Collection([new Locale('fr-RU')]);
+
+		$translator = $this->getMockBuilder(Translator::class)->setMethods(['parseParameters'])->setConstructorArgs([$locales, $this->path])->getMock();
 		$translator->expects($this->once())->method('parseParameters')->with('[b][color=#F00]%%[KEY]%% ([LOCALE])[/color][/b]', $this->equalTo(
 		[
 			'a' => 1,
@@ -719,7 +740,8 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test__WithTemplateMissingKey()
 	{
-		$translator = new Translator('fr-RU', $this->path);
+		$locales = new Collection([new Locale('fr-RU')]);
+		$translator = new Translator($locales, $this->path);
 
 		$this->assertSame('[b][color=#F00]%%abc/def.geh%% (fr-RU)[/color][/b]', $translator->__('abc/def.geh', ['a' => 1, 'key' => 'narf', 'c' => 'every']));
 
@@ -764,19 +786,19 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testParseKey($locale, $key, $expectedFile, $expectedKey, $exception)
 	{
-		$translator = new Translator('de-DE', $this->path);
+		$translator = new Translator(new Collection([new Locale('de-DE')]), $this->path);
 
 		$reflectionMethod = new \ReflectionMethod($translator, 'parseKey');
 		$reflectionMethod->setAccessible(true);
 
 		if ($exception === false)
 		{
-			$this->assertEquals([$expectedFile, $expectedKey], $reflectionMethod->invoke($translator, $key, $locale));
+			$this->assertEquals([$expectedFile, $expectedKey], $reflectionMethod->invoke($translator, $key, new Locale($locale)));
 		}
 		else
 		{
 			$this->setExpectedException(InvalidTranslationKey::class);
-			$reflectionMethod->invoke($translator, $key, 'de-DE');
+			$reflectionMethod->invoke($translator, $key, new Locale('de-DE'));
 		}
 	}
 }

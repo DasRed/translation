@@ -2,7 +2,6 @@
 namespace DasRed\Translation;
 
 use DasRed\Parser\BBCode;
-use DasRed\Translation\Exception\LocaleCanNotBeNull;
 use DasRed\Translation\Exception\FileNotFound;
 use DasRed\Translation\Exception\InvalidTranslationFile;
 use DasRed\Translation\Exception\InvalidTranslationKey;
@@ -10,6 +9,7 @@ use DasRed\Translation\Exception\PathCanNotBeNull;
 use DasRed\Translation\Exception\TranslationKeyNotFound;
 use DasRed\Translation\Exception\TranslationKeyIsNotAString;
 use Zend\Log\Logger;
+use DasRed\Translation\Locale\Collection;
 
 /**
  * Translator Class
@@ -18,18 +18,11 @@ class Translator
 {
 
 	/**
-	 * defines the current locale
+	 * defines the locales to use. first locale with result will return content
 	 *
-	 * @var string
+	 * @var Collection|Locales[]
 	 */
-	protected $localeCurrent;
-
-	/**
-	 * defines the Default locale for TR Keys which not in current or give are found
-	 *
-	 * @var string
-	 */
-	protected $localeDefault;
+	protected $locales;
 
 	/**
 	 *
@@ -77,19 +70,14 @@ class Translator
 
 	/**
 	 *
-	 * @param string $localeCurrent
+	 * @param Collection|Locale[] $locales
 	 * @param string $path
-	 * @param string $localeDefault
 	 * @param Logger $logger
 	 * @param BBCode $markupRenderer
 	 */
-	public function __construct($localeCurrent, $path, $localeDefault = null, Logger $logger = null, BBCode $markupRenderer = null)
+	public function __construct(Collection $locales, $path, Logger $logger = null, BBCode $markupRenderer = null)
 	{
-		$this->setLocaleCurrent($localeCurrent)
-			->setPath($path)
-			->setLocaleDefault($localeDefault)
-			->setLogger($logger)
-			->setMarkupRenderer($markupRenderer);
+		$this->setLocales($locales)->setPath($path)->setLogger($logger)->setMarkupRenderer($markupRenderer);
 	}
 
 	/**
@@ -98,65 +86,84 @@ class Translator
 	 * @param string $key this is the translation key WITH the translation file. Syntax "FILE.KEY". e.g.: header.pageTitle
 	 * @param string[] $parameters list of key value list to replace in the content of translated string. in Translation is the syntax
 	 *        "[KEY]". key is case insensitive
-	 * @param string $locale if not defined, then $this->getUserLocale())
-	 * @param string $default
+	 * @param Locale $locale if not defined, then $this->getUserLocale())
 	 * @param bool $parseBBCode
 	 * @return string
 	 */
-	public function __($key, array $parameters = [], $locale = null, $default = null, $parseBBCode = true)
+	public function __($key, array $parameters = [], Locale $locale = null, $parseBBCode = true)
 	{
 		$parametersToUse = $parameters;
 
-		if ($locale === null)
+		$locales = [];
+		if ($locale !== null)
 		{
-			$locale = $this->getLocaleCurrent();
+			$locales[] = $locale;
 		}
+		$locales = array_merge($locales, $this->getLocales()->getEnabled()->getArrayCopy());
 
 		$translationFile = null;
-		$translationKey = $key;
+		$translationKey = null;
 
-		// get
-		try
+		$translation = null;
+
+		/** @var $localeToUse Locale */
+		foreach ($locales as $localeToUse)
 		{
-			list ($translationFile, $translationKey) = $this->parseKey($key, $locale);
-			$translation = $this->get($locale, $translationFile, $translationKey);
-		}
-		// fallback
-		catch (Exception $exception)
-		{
-			if ($exception instanceof InvalidTranslationKey)
+			// get
+			try
 			{
-				$translationFile = $exception->getTranslationFile();
-				$translationKey = $exception->getTranslationKey();
+				list($translationFile, $translationKey) = $this->parseKey($key, $localeToUse);
+				$translation = $this->get($localeToUse, $translationFile, $translationKey);
+				return $this->handleTranslation($translation, $parametersToUse, $parseBBCode);
 			}
-
-			$translation = $default;
-			if ($default === null)
+			// fallback
+			catch (Exception $exception)
 			{
-				// go fallback
-				if ($locale !== $this->getLocaleDefault())
+				if ($exception instanceof InvalidTranslationKey)
 				{
-					return $this->__($key, $parametersToUse, $this->getLocaleDefault(), $default, $parseBBCode);
+					if ($translationFile === null)
+					{
+						$translationFile = $exception->getTranslationFile();
+					}
+					if ($translationKey === null)
+					{
+						$translationKey = $exception->getTranslationKey();
+					}
 				}
 
-				// show error text
-				$translation = $this->getTemplateMissingKey();
-				$parametersToUse['locale'] = $locale;
-				$parametersToUse['key'] = $key;
-				$parametersToUse['file'] = $translationFile;
-				$parametersToUse['translationKey'] = $translationKey;
+				$this->log($exception->getMessage(), Logger::ERR, [
+					'trace' => $exception->getTrace(),
+					'locale' => $locale->getName(),
+					'localeToUse' => $localeToUse->getName(),
+					'key' => $key,
+					'parameters' => $parameters
+				]);
 			}
-
-			$this->log($exception->getMessage(), Logger::ERR, [
-				'trace' => $exception->getTrace(),
-				'locale' => $locale,
-				'key' => $key,
-				'parameters' => $parameters
-			]);
 		}
 
+		// failed.. can not find anything
+		$translation = $this->getTemplateMissingKey();
+
+		// show error text
+		$parametersToUse['locale'] = $locale->getName();
+		$parametersToUse['key'] = $key;
+		$parametersToUse['file'] = $translationFile;
+		$parametersToUse['translationKey'] = $translationKey;
+
+		return $this->handleTranslation($translation, $parametersToUse, $parseBBCode);
+	}
+
+	/**
+	 *
+	 * @param string $translation
+	 * @param array $parameters
+	 * @param bool $parseBBCode
+	 * @return string
+	 */
+	protected function handleTranslation($translation, array $parameters = [], $parseBBCode = true)
+	{
 		// parse parameters
-		$translation = $this->parseParameters($translation, $parametersToUse);
+		$translation = $this->parseParameters($translation, $parameters);
 
 		// parse BB Code
 		if ($parseBBCode === true && empty($translation) === false && $this->getMarkupRenderer() !== null)
@@ -170,28 +177,30 @@ class Translator
 	/**
 	 * retrieves a translation key from file for a locale
 	 *
-	 * @param string $locale
+	 * @param Locale $locale
 	 * @param string $file
 	 * @param string $key
 	 * @return string
 	 * @throws TranslationKeyNotFound
 	 * @throws TranslationKeyIsNotAString
 	 */
-	protected function get($locale, $file, $key)
+	protected function get(Locale $locale, $file, $key)
 	{
+		$localeName = $locale->getName();
+
 		// load it
 		$this->load($locale, $file);
 
-		if (array_key_exists($key, $this->translations[$locale][$file]) === false)
+		if (array_key_exists($key, $this->translations[$localeName][$file]) === false)
 		{
-			throw new TranslationKeyNotFound($key, $this->getPath(), $locale, $file);
+			throw new TranslationKeyNotFound($key, $this->getPath(), $localeName, $file);
 		}
 
-		$result = $this->translations[$locale][$file][$key];
+		$result = $this->translations[$localeName][$file][$key];
 
 		if (is_string($result) === false)
 		{
-			throw new TranslationKeyIsNotAString($result, $key, $this->getPath(), $locale, $file);
+			throw new TranslationKeyIsNotAString($result, $key, $this->getPath(), $localeName, $file);
 		}
 
 		return $result;
@@ -199,18 +208,26 @@ class Translator
 
 	/**
 	 *
-	 * @param string $locale
+	 * @param Locale $locale
 	 * @param bool $parseBBCode
 	 * @return string[][]
 	 */
-	public function getAll($locale = null, $parseBBCode = true)
+	public function getAll(Locale $locale = null, $parseBBCode = true)
 	{
 		if ($locale === null)
 		{
-			$locale = $this->getLocaleCurrent();
+			$locale = $this->getLocales()->find(function (Locale $locale)
+			{
+				return $locale->isEnabled();
+			});
+			if ($locale === null)
+			{
+				return [];
+			}
 		}
+		$localeName = $locale->getName();
 
-		$path = str_replace('\\', '/', $this->getPath() . '/' . $locale);
+		$path = str_replace('\\', '/', $this->getPath() . '/' . $localeName);
 		if (is_dir($path) === false)
 		{
 			return [];
@@ -240,16 +257,16 @@ class Translator
 			$this->load($locale, $dirName . $fileName);
 		}
 
-		$translations[$locale] = $this->translations[$locale];
+		$translations[$localeName] = $this->translations[$localeName];
 
 		// parse BBCode
 		if ($parseBBCode === true && $this->getMarkupRenderer() !== null)
 		{
-			foreach ($translations[$locale] as $file => $keys)
+			foreach ($translations[$localeName] as $file => $keys)
 			{
 				foreach ($keys as $trKey => $trValue)
 				{
-					$translations[$locale][$file][$trKey] = $this->getMarkupRenderer()->parse($trValue);
+					$translations[$localeName][$file][$trKey] = $this->getMarkupRenderer()->parse($trValue);
 				}
 			}
 		}
@@ -288,28 +305,13 @@ class Translator
 	}
 
 	/**
-	 * returns the current locale
+	 * returns the locales
 	 *
-	 * @return string
+	 * @return Collection|Locales[]
 	 */
-	public function getLocaleCurrent()
+	public function getLocales()
 	{
-		return $this->localeCurrent;
-	}
-
-	/**
-	 * returns the default locale
-	 *
-	 * @return string
-	 */
-	public function getLocaleDefault()
-	{
-		if ($this->localeDefault === null)
-		{
-			return $this->getLocaleCurrent();
-		}
-
-		return $this->localeDefault;
+		return $this->locales;
 	}
 
 	/**
@@ -371,18 +373,18 @@ class Translator
 	/**
 	 * checks if a file for a given locale loaded
 	 *
-	 * @param string $locale
+	 * @param Locale $locale
 	 * @param string $file
 	 * @return boolean
 	 */
-	protected function isFileLoaded($locale, $file)
+	protected function isFileLoaded(Locale $locale, $file)
 	{
-		if (array_key_exists($locale, $this->translations) === false)
+		if (array_key_exists($locale->getName(), $this->translations) === false)
 		{
 			return false;
 		}
 
-		if (array_key_exists($file, $this->translations[$locale]) === false)
+		if (array_key_exists($file, $this->translations[$locale->getName()]) === false)
 		{
 			return false;
 		}
@@ -393,13 +395,13 @@ class Translator
 	/**
 	 * loads translations from file
 	 *
-	 * @param string $locale
+	 * @param Locale $locale
 	 * @param string $fileName
 	 * @throws FileNotFound
 	 * @throws InvalidTranslationFile
 	 * @return boolean
 	 */
-	protected function load($locale, $fileName)
+	protected function load(Locale $locale, $fileName)
 	{
 		// check for already loading
 		if ($this->isFileLoaded($locale, $fileName) === true)
@@ -409,10 +411,10 @@ class Translator
 
 		$startTime = microtime(true);
 
-		$file = $this->getPath() . '/' . $locale . '/' . $fileName . '.php';
+		$file = $this->getPath() . '/' . $locale->getName() . '/' . $fileName . '.php';
 		if (file_exists($file) === false)
 		{
-			throw new FileNotFound($this->getPath(), $locale, $fileName);
+			throw new FileNotFound($this->getPath(), $locale->getName(), $fileName);
 		}
 
 		$translationKeys = include $file;
@@ -420,20 +422,20 @@ class Translator
 		// not found
 		if ($translationKeys === null || is_array($translationKeys) === false)
 		{
-			throw new InvalidTranslationFile($this->getPath(), $locale, $fileName);
+			throw new InvalidTranslationFile($this->getPath(), $locale->getName(), $fileName);
 		}
 
 		// create array index locale
-		if (array_key_exists($locale, $this->translations) === false)
+		if (array_key_exists($locale->getName(), $this->translations) === false)
 		{
-			$this->translations[$locale] = [];
+			$this->translations[$locale->getName()] = [];
 		}
 
 		// create array index file with the translations keys
-		$this->translations[$locale][$fileName] = $translationKeys;
+		$this->translations[$locale->getName()][$fileName] = $translationKeys;
 
 		// log da shit
-		$this->log('Language loaded: ' . $locale . '/' . $fileName . ' (' . number_format(microtime(true) - $startTime, 2, ',', '.') . ')');
+		$this->log('Language loaded: ' . $locale->getName() . '/' . $fileName . ' (' . number_format(microtime(true) - $startTime, 2, ',', '.') . ')');
 
 		return true;
 	}
@@ -461,17 +463,18 @@ class Translator
 	/**
 	 *
 	 * @param string $key
-	 * @param string $locale
+	 * @param Locale $locale
 	 * @throws InvalidTranslationKey
 	 * @return string[0 => FILE, 1 => TRANSLATION KEY]
 	 */
-	protected function parseKey($key, $locale)
+	protected function parseKey($key, Locale $locale)
 	{
-		$pathesToTest = array_unique([
-			$this->getPath() . '/' . $locale . '/',
-			$this->getPath() . '/' . $this->getLocaleCurrent() . '/',
-			$this->getPath() . '/' . $this->getLocaleDefault() . '/',
-		]);
+		$pathesToTest = array_unique(array_map(function (Locale $locale)
+		{
+			$this->getPath() . '/' . $locale->getName() . '/';
+		}, array_merge([
+			$locale
+		], $this->getLocales()->getEnabled()->getArrayCopy())));
 
 		$translationFile = null;
 		$translationKey = $key;
@@ -525,33 +528,14 @@ class Translator
 	}
 
 	/**
-	 * set the current locale
+	 * set the locales
 	 *
-	 * @param string $localeCurrent
-	 * @return self
-	 * @throws LocaleCanNotBeNull
-	 */
-	public function setLocaleCurrent($localeCurrent)
-	{
-		if ($localeCurrent === null)
-		{
-			throw new LocaleCanNotBeNull('current');
-		}
-
-		$this->localeCurrent = $localeCurrent;
-
-		return $this;
-	}
-
-	/**
-	 * set the default locale
-	 *
-	 * @param string $localeDefault
+	 * @param Collection|Locales[] $locales
 	 * @return self
 	 */
-	public function setLocaleDefault($localeDefault)
+	public function setLocales(Collection $locales)
 	{
-		$this->localeDefault = $localeDefault;
+		$this->locales = $locales;
 
 		return $this;
 	}
