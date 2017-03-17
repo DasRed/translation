@@ -10,9 +10,12 @@
 		"zendframework/zend-config": "~2.5",
 		"zendframework/zend-log": "~2.5",
 		"zendframework/zend-servicemanager": "~2.5",
-		"phpoffice/phpexcel": "~1.8",
 		"dasred/zend-console": "@stable",
 		"dasred/bb-code-parser": "@stable"
+	},
+
+	"require-dev": {
+		"phpoffice/phpexcel": "~1.8"
 	},
 
 	"autoload": {
@@ -28,5 +31,9 @@
 
 	"bin": [
 		"bin/translation"
-	]
+	],
+
+	"suggest": {
+		"phpoffice/phpexcel": "~1.8 for using shell scripts export and import."
+	}
 }
